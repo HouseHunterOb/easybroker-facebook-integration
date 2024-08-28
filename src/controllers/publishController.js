@@ -4,20 +4,40 @@ const facebookService = require('../services/facebookService');
 const formatPropertyMessage = (property) => {
     let message = '';
 
-    // Agregar título en negritas
+    // Agregar título de la propiedad
     if (property.title) {
-        message += `**🏠 ${property.title}**\n\n`;
+        message += `🏠 ${property.title}\n\n`;
     }
 
-    // Agregar precio en negritas
+    // Agregar tipo de operación (renta o venta)
+    if (property.operations && property.operations[0]) {
+        const operationType = property.operations[0].type === 'rent' ? '🏡 En Renta' : '🏡 En Venta';
+        message += `${operationType}\n\n`;
+    }
+
+    // Agregar tipo de inmueble
+    if (property.property_type) {
+        message += `🏢 Tipo de Inmueble: ${property.property_type}\n\n`;
+    }
+
+    // Agregar precio de la propiedad
     if (property.operations && property.operations[0] && property.operations[0].formatted_amount) {
-        message += `**💰 Precio: ${property.operations[0].formatted_amount}**\n\n`;
+        message += `💰 Precio: ${property.operations[0].formatted_amount}\n\n`;
     }
 
-    // Formatear la descripción en bullets
+    // Agregar metros de construcción
+    if (property.construction_size) {
+        message += `📐 Metros de Construcción: ${property.construction_size} m²\n\n`;
+    }
+
+    // Agregar ubicación de la propiedad
+    if (property.location && property.location.name) {
+        message += `📍 Ubicación: ${property.location.name}\n\n`;
+    }
+
+    // Incluir la descripción tal como proviene de EasyBroker, sin formato adicional
     if (property.description) {
-        const bullets = property.description.split('\n').map(line => `- ${line}`).join('\n');
-        message += `📄 Descripción:\n${bullets}\n\n`;
+        message += `📄 Descripción:\n${property.description}\n\n`;
     }
 
     // Agregar enlace a la propiedad
