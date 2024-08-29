@@ -1,2 +1,20 @@
+# Node modules
 node_modules/
+
+# Environment variables
 .env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Optional npm cache directory
+.npm
+
+# Other potentially sensitive files
+.DS_Store
+.idea/
+.vscode/

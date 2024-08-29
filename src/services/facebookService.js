@@ -1,9 +1,10 @@
+// src/services/facebookService.js
 const axios = require('axios');
 const readline = require('readline');
 
 const facebookService = {
     async publishToFacebook(message, propertyImages, index, total, retries = 3) {
-        const pageId = '405191686010275'; // Reemplaza con el ID correcto de tu página de Facebook
+        const pageId = process.env.FACEBOOK_PAGE_ID; // Ahora se toma de las variables de entorno
         let mediaFbIds = [];
 
         try {
@@ -40,7 +41,7 @@ const facebookService = {
                 console.log(`Error 504 al publicar la propiedad ${index + 1}. Reintentando... (${3 - retries} de 3)`);
                 return this.publishToFacebook(message, propertyImages, index, total, retries - 1);
             } else {
-                console.error(`Error al publicar la propiedad ${index + 1}: ${error.response ? error.response.data.error.message : error.message}`);
+                console.error(`Error al publicar la propiedad ${index + 1}. Detalles del error: ${error.message}`);
                 return false; // Indica fallo
             }
         }

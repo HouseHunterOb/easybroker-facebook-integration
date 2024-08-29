@@ -1,3 +1,4 @@
+// src/controllers/publishController.js
 const easybrokerService = require('../services/easybrokerService');
 const facebookService = require('../services/facebookService');
 
