@@ -1,85 +1,77 @@
-const easybrokerService = require('../services/easybrokerService');
+const { getPropertyDetails } = require('../services/easybrokerService');
 const facebookService = require('../services/facebookService');
 
-const formatPropertyMessage = (property) => {
-    let message = '';
+// Generar la descripción con emojis basada en los detalles de la propiedad
+const generatePropertyDescription = (property) => {
+    const { bedrooms, bathrooms, parking_spaces, construction_size, expenses, property_type } = property;
+    
+    let description = '';
 
-    // Agregar título de la propiedad
-    if (property.title) {
-        message += `🏠 ${property.title}\n\n`;
+    // Tipo de propiedad con emoji
+    const propertyTypeEmoji = {
+        'casa': '🏠',
+        'departamento': '🏢',
+        'terreno': '🌍',
+        'oficina': '🏢',
+        'bodega': '🏬',
+        'local': '🏪',
+        'otro': '🏡'
+    };
+
+    description += `${propertyTypeEmoji[property_type.toLowerCase()] || '🏡'} Tipo de Propiedad: ${property_type}\n`;
+
+    // Habitaciones
+    if (bedrooms) {
+        description += `🛏️ Habitaciones: ${bedrooms}\n`;
     }
 
-    // Agregar tipo de operación (renta o venta)
-    if (property.operations && property.operations[0]) {
-        const operationType = property.operations[0].type === 'rent' ? '🏡 En Renta' : '🏡 En Venta';
-        message += `${operationType}\n\n`;
+    // Baños
+    if (bathrooms) {
+        description += `🛁 Baños: ${bathrooms}\n`;
     }
 
-    // Agregar tipo de inmueble
-    if (property.property_type) {
-        message += `🏢 Tipo de Inmueble: ${property.property_type}\n\n`;
+    // Espacios de estacionamiento
+    if (parking_spaces) {
+        description += `🚗 Estacionamientos: ${parking_spaces}\n`;
     }
 
-    // Agregar precio de la propiedad
-    if (property.operations && property.operations[0] && property.operations[0].formatted_amount) {
-        message += `💰 Precio: ${property.operations[0].formatted_amount}\n\n`;
+    // Tamaño de la construcción
+    if (construction_size) {
+        description += `📐 Tamaño de la construcción: ${construction_size} m²\n`;
     }
 
-    // Agregar metros de construcción
-    if (property.construction_size) {
-        message += `📐 Metros de Construcción: ${property.construction_size} m²\n\n`;
+    // Gastos
+    if (expenses && expenses !== "0") {
+        description += `💸 Gastos adicionales: ${expenses}\n`;
+    } else {
+        description += `💸 Gastos adicionales: No especificados\n`;
     }
 
-    // Agregar ubicación de la propiedad
-    if (property.location && property.location.name) {
-        message += `📍 Ubicación: ${property.location.name}\n\n`;
-    }
-
-    // Incluir la descripción tal como proviene de EasyBroker, sin formato adicional
-    if (property.description) {
-        message += `📄 Descripción:\n${property.description}\n\n`;
-    }
-
-    // Agregar enlace a la propiedad
-    message += `🔗 Más información: ${property.public_url}`;
-
-    return message;
+    return description;
 };
 
 const publishProperties = async (propertyIds) => {
-    const total = propertyIds.length;
-    let allSuccessful = true;
-
-    for (let i = 0; i < total; i++) {
+    for (const propertyId of propertyIds) {
         try {
-            const propertyId = propertyIds[i];
-            const property = await easybrokerService.getPropertyDetails(propertyId);
+            // 1. Obtener los detalles de la propiedad desde EasyBroker
+            const property = await getPropertyDetails(propertyId);
 
-            const formattedMessage = formatPropertyMessage(property);
+            // 2. Generar la nueva descripción usando nuestra función personalizada
+            const description = generatePropertyDescription(property);
 
-            // Verificar si la propiedad tiene imágenes
-            const propertyImages = property.property_images || [];
+            // 3. Construir el mensaje para Facebook
+            const message = `${property.title}\n\n${description}\n\nMás información: ${property.public_url}`;
 
-            if (propertyImages.length > 0) {
-                const success = await facebookService.publishToFacebook(formattedMessage, propertyImages, i, total);
-                if (!success) allSuccessful = false;
-            } else {
-                console.log(`La propiedad ${propertyId} no tiene imágenes. Publicando solo el texto.`);
-                const success = await facebookService.publishToFacebook(formattedMessage, [], i, total);
-                if (!success) allSuccessful = false;
-            }
+            // 4. Publicar en Facebook utilizando el servicio correspondiente
+            await facebookService.publishToFacebook(message, property.property_images);
 
+            console.log(`Propiedad ${propertyId} publicada con éxito.`);
         } catch (error) {
-            console.error(`Error general al manejar la propiedad ${i + 1}: ${error.message}`);
-            allSuccessful = false;
+            console.error(`Error al publicar la propiedad ${propertyId}:`, error.message);
         }
-    }
-
-    if (allSuccessful) {
-        console.log('Todas las propiedades se publicaron exitosamente.');
-    } else {
-        console.log('Hubo errores al publicar algunas propiedades.');
     }
 };
 
-module.exports = { publishProperties };
+module.exports = {
+    publishProperties,
+};

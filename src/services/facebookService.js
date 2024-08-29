@@ -1,50 +1,32 @@
 const axios = require('axios');
-const readline = require('readline');
 
-const facebookService = {
-    async publishToFacebook(message, propertyImages, index, total, retries = 3) {
-        const pageId = '405191686010275'; // Reemplaza con el ID correcto de tu página de Facebook
-        let mediaFbIds = [];
+const publishToFacebook = async (message, images) => {
+    const accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+    const pageId = process.env.FACEBOOK_PAGE_ID;
 
-        try {
-            // Publicar cada imagen primero y guardar sus IDs
-            for (const image of propertyImages) {
-                const photoResponse = await axios.post(`https://graph.facebook.com/v12.0/${pageId}/photos`, {
-                    url: image.url,
-                    access_token: process.env.FACEBOOK_ACCESS_TOKEN,
-                    published: false // No publicarla inmediatamente
-                });
-                mediaFbIds.push({ media_fbid: photoResponse.data.id });
+    const url = `https://graph.facebook.com/v12.0/${pageId}/feed`;
 
-                // Actualizar el progreso al subir cada imagen
-                const imageProgress = Math.floor(((mediaFbIds.length / propertyImages.length) * 100) / total);
-                readline.cursorTo(process.stdout, 0);
-                process.stdout.write(`Progreso de la imagen ${mediaFbIds.length} de ${propertyImages.length} para la propiedad ${index + 1}: ${imageProgress}%`);
-            }
+    // Construir el cuerpo del mensaje
+    let body = {
+        message: message,
+        access_token: accessToken
+    };
 
-            // Publicar el mensaje junto con las imágenes
-            const postResponse = await axios.post(`https://graph.facebook.com/v12.0/${pageId}/feed`, {
-                message: message,
-                attached_media: mediaFbIds,
-                access_token: process.env.FACEBOOK_ACCESS_TOKEN
-            });
+    // Si tienes imágenes, necesitarás subirlas y luego incluirlas en la publicación
+    if (images && images.length > 0) {
+        const imageUrls = images.map(image => image.url).join(', ');
+        body.message += `\n\nImágenes: ${imageUrls}`;
+    }
 
-            // Mostrar progreso final para esta propiedad
-            const percentage = (((index + 1) / total) * 100).toFixed(2);
-            readline.cursorTo(process.stdout, 0);
-            process.stdout.write(`Publicación ${index + 1} de ${total} completada (${percentage}%).\n`);
-
-            return true; // Indica éxito
-        } catch (error) {
-            if (error.response && error.response.status === 504 && retries > 0) {
-                console.log(`Error 504 al publicar la propiedad ${index + 1}. Reintentando... (${3 - retries} de 3)`);
-                return this.publishToFacebook(message, propertyImages, index, total, retries - 1);
-            } else {
-                console.error(`Error al publicar la propiedad ${index + 1}: ${error.response ? error.response.data.error.message : error.message}`);
-                return false; // Indica fallo
-            }
-        }
+    try {
+        const response = await axios.post(url, body);
+        console.log('Publicación exitosa en Facebook:', response.data);
+    } catch (error) {
+        console.error('Error al publicar en Facebook:', error.response.data);
+        throw error;
     }
 };
 
-module.exports = facebookService;
+module.exports = {
+    publishToFacebook,
+};
